@@ -1,0 +1,17 @@
+{
+  "name": "test-backend",
+  "version": "1.0.0",
+  "description": "Backend test",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.26.0",
+    "lodash": "^4.17.21",
+    "mongoose": "^5.9.28"
+  }
+}

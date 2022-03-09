@@ -18,9 +18,7 @@ db.on('error', () => console.log('Database error'))
 
 
 //to extract data from Hubspot and populate private DB
-async function populateCompanies(){
-    await Company.deleteMany({})
-        
+function populateCompanies(){       
     return axios.get(dataServerUrl+'/companies')
         .then(response =>{
             return response.data
@@ -83,32 +81,39 @@ function createParentCompanies(parentCompanies){
 }
 
 // load parent child relationship
-function loadParentChild(){
-        var data=[]
+ function loadParentChild(){
+        let data=[]
+        
         return Company.find({ 'client_parent_company_id': null, 'right_company_name': null})
         .then(companies=>{
-            let promises=[]
-            companies.forEach(e=>{
-            
-                let prom =Company.find({ 'client_parent_company_id': e.client_company_location_id})
-                .then(children=>{
-                    e.children = children
-                    data.push(e)
-                })
-                promises.push(prom)
-             
-            })
+        
+            let proms=[]
+            for(var i=0;i<companies.length;i++){
+                let e = companies[i]
+                let prom = Company.find({ 'client_parent_company_id': e.client_company_location_id})
+                    .then(children=>{
+                            // return children
+                        e.children = children
+                        data.push(e)
+                    
+                    })
 
-            return Promise.all(promises)
+                proms.push(prom)
             
+            }
+            return Promise.all(proms)
         })
-        .then(()=>data)
+        .then(()=>{
+            // console.log(data)
+            return data
+        })
        
 
 }
 
 //create parent-child association
 function createAssocisations(parentCompanies){
+   
     const parent_company_to_child_company  = 13
         parentCompanies.forEach(parent=>{
 
@@ -120,8 +125,18 @@ function createAssocisations(parentCompanies){
                     category: "HUBSPOT_DEFINED",
                     definitionId: parent_company_to_child_company
                 }
-                var action = axios.post(dataServerUrl+'/associations',data)     
+                // console.log(data)
+                
+                //create parent-child associations on Hubspot  
                 axios.put(dataServerUrl+'/associations',data)
+                    .then(response=>console.log(response.data))
+
+                let child_data = {
+                    name:child.right_company_name
+                }
+                console.log(child_data)
+                //update child names
+                axios.put(dataServerUrl+'/companies/'+child.company_id,child_data)
                     .then(response=>console.log(response.data))
                     
             })
@@ -131,14 +146,16 @@ function createAssocisations(parentCompanies){
 
 //main funtion
 function process(){
-    populateCompanies()
+    Company.deleteMany({})
+        .then(()=>populateCompanies())
         .then(()=> getParentCompanies())
         .then(parentCompanies=>createParentCompanies(parentCompanies))
+        .then(()=>Company.deleteMany({}))
         .then(()=>populateCompanies())
         .then(()=>loadParentChild())
         .then(parentCompanies=>createAssocisations(parentCompanies))
 
-    loadParentChild().then((parentCompanies)=>{
-    })
+
+
     
 }

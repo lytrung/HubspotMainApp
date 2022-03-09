@@ -115,6 +115,7 @@ function createParentCompanies(parentCompanies){
 function createAssocisations(parentCompanies){
    
     const parent_company_to_child_company  = 13
+    var proms=[]
     parentCompanies.forEach(parent=>{
 
         parent.children.forEach(child=>{
@@ -128,24 +129,16 @@ function createAssocisations(parentCompanies){
             // console.log(data)
             
             //create parent-child associations on Hubspot  
-            axios.put(dataServerUrl+'/associations',data)
+            var prom = axios.put(dataServerUrl+'/associations',data)
                 .then(response=>console.log(response.data))
-
-            // let child_data = {
-            //     name:child.right_company_name
-            // }
-            // console.log(child_data)
-            // //update child names
-            // axios.put(dataServerUrl+'/companies/'+child.company_id,child_data)
-            //     .then(response=>console.log(response.data))
+            proms.push(prom)
                 
         })
 
     })
 
-    return parentCompanies
-
-    
+    return Promise.all(proms).then(()=>parentCompanies)//dont return till all associations added
+                 
 }
 
 function updateChildCompanies(parentCompanies){
@@ -163,10 +156,13 @@ function updateChildCompanies(parentCompanies){
                 
     })
     
-    axios.put(dataServerUrl+'/companies',{batchData})
-    .then(response=>console.log(response.data))
+    return axios.put(dataServerUrl+'/companies',{batchData})
+    .then(response=>{
+        console.log(response.data)
+        return parentCompanies
+    })
 
-    return parentCompanies
+    
 }
 
 //main funtion
@@ -178,10 +174,8 @@ function process(){
         .then(()=>Company.deleteMany({}))//to refresh data with newly created keys
         .then(()=>populateCompanies())
         .then(()=>loadParentChild())
-        .then(parentCompanies=>createAssocisations(parentCompanies))
         .then(parentCompanies=>updateChildCompanies(parentCompanies))
+        .then(parentCompanies=>createAssocisations(parentCompanies))
+        
 
-
-
-    
 }

@@ -115,33 +115,58 @@ function createParentCompanies(parentCompanies){
 function createAssocisations(parentCompanies){
    
     const parent_company_to_child_company  = 13
-        parentCompanies.forEach(parent=>{
+    parentCompanies.forEach(parent=>{
 
-            parent.children.forEach(child=>{
+        parent.children.forEach(child=>{
 
-                let data  = {
-                    fromObjectId: parent.company_id,
-                    toObjectId: child.company_id,
-                    category: "HUBSPOT_DEFINED",
-                    definitionId: parent_company_to_child_company
-                }
-                // console.log(data)
+            let data  = {
+                fromObjectId: parent.company_id,
+                toObjectId: child.company_id,
+                category: "HUBSPOT_DEFINED",
+                definitionId: parent_company_to_child_company
+            }
+            // console.log(data)
+            
+            //create parent-child associations on Hubspot  
+            axios.put(dataServerUrl+'/associations',data)
+                .then(response=>console.log(response.data))
+
+            // let child_data = {
+            //     name:child.right_company_name
+            // }
+            // console.log(child_data)
+            // //update child names
+            // axios.put(dataServerUrl+'/companies/'+child.company_id,child_data)
+            //     .then(response=>console.log(response.data))
                 
-                //create parent-child associations on Hubspot  
-                axios.put(dataServerUrl+'/associations',data)
-                    .then(response=>console.log(response.data))
-
-                let child_data = {
-                    name:child.right_company_name
-                }
-                console.log(child_data)
-                //update child names
-                axios.put(dataServerUrl+'/companies/'+child.company_id,child_data)
-                    .then(response=>console.log(response.data))
-                    
-            })
-
         })
+
+    })
+
+    return parentCompanies
+
+    
+}
+
+function updateChildCompanies(parentCompanies){
+
+    var batchData = []
+    parentCompanies.forEach(parent=>{
+
+        var data = parent.children.map(child=>{
+            return {
+                company_id:child.company_id,
+                name:child.right_company_name
+            }
+        })
+        batchData = [...batchData,...data]
+                
+    })
+    
+    axios.put(dataServerUrl+'/companies',{batchData})
+    .then(response=>console.log(response.data))
+
+    return parentCompanies
 }
 
 //main funtion
@@ -150,10 +175,11 @@ function process(){
         .then(()=>populateCompanies())
         .then(()=> getParentCompanies())
         .then(parentCompanies=>createParentCompanies(parentCompanies))
-        .then(()=>Company.deleteMany({}))
+        .then(()=>Company.deleteMany({}))//to refresh data with newly created keys
         .then(()=>populateCompanies())
         .then(()=>loadParentChild())
         .then(parentCompanies=>createAssocisations(parentCompanies))
+        .then(parentCompanies=>updateChildCompanies(parentCompanies))
 
 
 
